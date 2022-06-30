@@ -89,15 +89,15 @@ class DMCV3Handler(BaseHandler):
         command = args['command']
         response = {}
         if (command == GET_ACTION):
-            _action_idx = self.agent.get_action(
-                args['position'], args['obs'], args['flags'])
-            response = {'action': _action_idx}
+            response = self.agent.get_action(position=args['position'],
+                                                sim=args['sim'],
+                                                flags=args['flags'])
+            response = {'response': response}
 
         elif (command == GET_INIT_HIDDEN_STATE):
             response = {'hidden_state': None}
         elif (command == STORE):
             self.agent.store(args['episode_data'], args['role'])
-
         else:
             raise Exception("Unknown command: {}".format(command))
         return response
