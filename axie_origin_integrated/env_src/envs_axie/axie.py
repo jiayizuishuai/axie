@@ -24,7 +24,7 @@ class Env_Axie(object):
         self.axie_feature = Axie_Feature(config)
         self.card_feature = Card_Feature(config)
 
-        with open(os.path.join(config['path'], 'card2id.yaml'), "r") as f:
+        with open(os.path.join(os.path.dirname(__file__), 'config', 'card2id.yaml'), "r") as f:
             self.card2id = yaml.load(f.read(), Loader=yaml.SafeLoader)
 
 
