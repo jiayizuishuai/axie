@@ -2,11 +2,6 @@ from core.base_agent import BaseAgent
 from .models import Model
 import torch
 
-from axie_origin_integrated.env_src.envs_axie.axie_feature import Axie_Feature
-from axie_origin_integrated.env_src.envs_axie.card_feature import Card_Feature
-from simulator.base import *
-from collections import OrderedDict
-
 from torch import nn
 from collections import deque
 import numpy as np
@@ -37,10 +32,7 @@ class DMCV3Agent(BaseAgent):
         self.args = args
         self.batch_size = args.batch_size
         self.model_names = args.model_names.split('|')
-
-        self.config = {'path': '/Users/francis/Public/francis/project/rct-env-driven-middleware/axie_origin_integrated/env_src/envs_axie/config'}
-        self.axie_feature = Axie_Feature(self.config)
-        self.card_feature = Card_Feature(self.config)
+        #self.model_names = ['1','2']
 
         device = args.train_device
 
@@ -53,13 +45,13 @@ class DMCV3Agent(BaseAgent):
             self.model_load_dirs[model_name] = self.args.model_load_dir + model_name + '/'
 
         if (args.load_model == False):
-            self.infer_models = Model(device=args.infer_device, model_names=self.model_names)
+            self.infer_models = Model(device=args.infer_device, model_names=self.model_names)#一个infermodel
         else:
             self.infer_models = self.load_models()
 
 
         if (args.agent_type == 'train'):
-            self.learner_models = Model(device=args.train_device, model_names=self.model_names)
+            self.learner_models = Model(device=args.train_device, model_names=self.model_names)#一个learnermodel
             self.optimizers = create_optimizers(args, self.learner_models, self.model_names)
             self.update_infer_model()
 
@@ -84,27 +76,11 @@ class DMCV3Agent(BaseAgent):
             self.infer_models.get_model(model_name).load_state_dict(
                 self.learner_models.get_model(model_name).state_dict())
 
-    def get_action(self, position, sim, flags):
-        info = [sim.battle.current_player, sim.battle.current_player.enemy, sim.battle]
-
-        state = self.axie_feature.get_axie_feature(info)
-
-        legal_actions, encoded_legal_actions = self.get_legal_actions(info)
-
-        x_batch = OrderedDict({'state': state,
-                               'legal_actions': legal_actions,
-                               'encoded_legal_actions': encoded_legal_actions})
-
-
-        agent_output = self.infer_models.forward(position, x_batch, flags=flags)
+    def get_action(self, position, obs, flags):
+        agent_output = self.infer_models.forward(position, obs, flags=flags)
         _action_idx = int(agent_output['action'].cpu().detach().numpy())
 
-        response = {'action': x_batch['legal_actions'][_action_idx],
-                    'encoded_action': x_batch['encoded_legal_actions'][_action_idx]}
-
-        return response
-
-
+        return _action_idx
 
     def check_update(self):
         temp = []
@@ -171,42 +147,6 @@ class DMCV3Agent(BaseAgent):
     def get_init_hidden_state(self):
         return None
 
-
-    def get_legal_actions(self, info):
-        player, enemy_player, battle = info
-        cards = player.hand_cards
-
-        legal_actions = [['end_turn', -1]]
-        encoded_legal_actions = []
-
-        # find the legal action card and add into list
-        for card in cards:
-
-            if (card.can_play == False):
-                continue
-
-            target_type = card.target_type
-
-            if target_type == TargetType.Auto:
-                legal_actions.append([card, -1])
-
-            elif target_type == TargetType.Ally:
-                for position, axie in enumerate(player.positions):
-                    if axie:
-                        legal_actions.append([card, position])
-
-            elif target_type == TargetType.Enemy:
-                for position, axie in enumerate(player.enemy.positions):
-                    if axie:
-                        legal_actions.append([card, position])
-
-        # encode the legal action card
-        for action in legal_actions:
-            encoded_legal_actions.append(self.card_feature._card2array(info, action))
-
-
-        return legal_actions, encoded_legal_actions
-
     def load_models(self):
         model = Model(device=self.args.infer_device, model_init=False)
 
@@ -219,3 +159,4 @@ class DMCV3Agent(BaseAgent):
                 raise ('Not a Model File!')
 
         return model
+

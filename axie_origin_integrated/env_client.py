@@ -7,7 +7,9 @@ from simulator.simulator import Simulator
 from simulator.entity_builder import loads_every_thing, random_player
 from torch import multiprocessing as mp
 
+from axie_origin_integrated.agent.dmc_agent import DMCV3Agent
 
+import os
 import time
 
 # loads_every_thing(True)
@@ -25,6 +27,7 @@ def env_construct_and_run(i, config, port_id):
                                          positions=config['positions'],
                                          unroll_length=args.unroll_length)
 
+    agent = DMCV3Agent(config['args'])#初始化agent
     while True:
         env.reset()
 
@@ -42,21 +45,53 @@ def env_construct_and_run(i, config, port_id):
                                  env.players[1 - current_player_index],
                                  env.sim.battle])
 
+
+
             while (not env.sim.is_finished()):
-                action = agent_interface.get_action(position=env.player_ids[current_player_index], obs=obs)
-                action_card, action_target = action
+                # TODO using action which is responsed from server
+                if (env.sim.battle.current_player is env.players[0]):
+                    current_player_index = 0
+                    #obs_jiayi = env.get_state_jiayi([env.players[0],
+                    #                                 env.players[1],
+                     #                                env.sim.battle])
+
+
+
+                    action = agent_interface.get_action(position=env.player_ids[current_player_index], obs=obs)
+                    action_card, action_target = action
+
+
+                #for test , using local get_action
+
+                   #_action_idx = agent.get_action(env.player_ids[current_player_index], obs, flags=None)
+                   # action = obs['legal_actions'][_action_idx]
+                   # action_card, action_target = action
+
+
+                # For test, using auto play card
+                #action_card, action_target = auto_play_card(env.players[current_player_index])
 
                 # break the loop if the action is "end turn"
-                if (action_card == 'end_turn'): break
+                    if (action_card == 'end_turn'): break
 
                 # execute this step in env
-                obs, reward, done, flags = env.step(action_card=action_card,
+                    obs, reward, done, flags = env.step(action_card=action_card,
                                                     action_target=action_target,
                                                     player_index=current_player_index)
 
-                if (done): break
-
-
+                    if (done): break
+                if (env.sim.battle.current_player is env.players[1]):
+                    current_player_index = 1
+                #    action_card, action_target = auto_play_card(env.players[current_player_index])
+                #    if (action_card == 'end_turn'): break
+                #    obs, reward, done, flags = env.step(action_card=action_card,
+                #                                        action_target=action_target,
+                #                                       player_index=current_player_index)
+                #    if (action_card == 'end_turn'): break
+                    for _ in range(10):
+                        env.sim.battle.current_player.random_place_card()
+                 #   if (done): break
+                    break
             # end this turn
             env.sim.end_round()
 
@@ -112,17 +147,71 @@ if __name__ == '__main__':
 
     parser.add_argument("--unroll_length", type=int, default=32, help="the length of data for once sending to server")
 
-    parser.add_argument("--num_actors", type=int, default=1, help='The num of actors for once client launching')
+    parser.add_argument("--num_actors", type=int, default=5, help='The num of actors for once client launching')
 
     parser.add_argument("--policy_server_num", type=int, default=1, help='The num of policy servers on server side')
 
+
+    #下面是服务端的参数
+
+
+    parser.add_argument('--learning_rate', default=0.0001, type=float,
+                        help='Learning rate')
+
+    parser.add_argument('--alpha', default=0.99, type=float,
+                        help='RMSProp smoothing constant')
+
+    parser.add_argument('--momentum', default=0, type=float,
+                        help='RMSProp momentum')
+
+    parser.add_argument('--epsilon', default=1e-5, type=float,
+                        help='RMSProp epsilon')
+
+    parser.add_argument('--max_grad_norm', default=40., type=float,
+                        help='Max norm of gradients')
+
+    parser.add_argument('--batch_size', default=100, type=int,
+                        help='batch_size')
+
+    parser.add_argument('--buffer_size', default=105, type=int,
+                        help='buffer_size')
+
+    parser.add_argument('--save_interval', default=600, type=int,
+                        help='The time interval(second) for saving the model parameters')
+
+    parser.add_argument('--model_save_dir', default='./models/', type=str,
+                        help='The model save path')
+
+    parser.add_argument('--model_load_dir', default='./models/', type=str,
+                        help='The model load path')
+
+    parser.add_argument('--load_model', action='store_true',
+                        help='Load an existing model')
+
+    parser.add_argument('--train_device', default='cpu', type=str)  # cpu or 0, 1, 2, ...
+
+    parser.add_argument('--infer_device', default='cpu', type=str)  # cpu or 0, 1, 2, ...
+
+    parser.add_argument('--close_log', default=False, type=bool)
+
+
+    parser.add_argument('--agent_type', default='train', type=str)
+
+    parser.add_argument('--model_names', default='model_0_player-id_4|model_0_player-id_5', type=str,
+       help='The model names')
+
+
+
+
     args = parser.parse_args()
-
+    card2id_path = os.path.abspath("axie_origin_integrated/env_src/envs_axie/config/card2id.yaml")
     config = {'args': args,
-              'positions': ['model:0_player-id:4',
-                            'model:0_player-id:5'],
-              'path': '/Users/francis/Public/francis/project/rct-env-driven-middleware/axie_origin_integrated/env_src/envs_axie/config'}
+              'positions': ['model_0_player-id_4',
+                            'model_0_player-id_5'],
+              'path': '/Users/97211/Desktop/axie/site/rct-env-driven-middleware/axie_origin_integrated/env_src/envs_axie/config'}
 
+    #env_construct_and_run(0, config,  port_id = args.port + 0 % args.policy_server_num)
+    #"""
     ctx = mp.get_context('spawn')
 
     for i in range(args.num_actors):
@@ -132,4 +221,4 @@ if __name__ == '__main__':
             args=(i, config, port_id))
         actor.start()
 
-
+    #"""

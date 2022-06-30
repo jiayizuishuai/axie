@@ -49,14 +49,16 @@ parser.add_argument('--train_device', default='cpu', type=str) # cpu or 0, 1, 2,
 
 parser.add_argument('--infer_device', default='cpu', type=str) # cpu or 0, 1, 2, ...
 
-parser.add_argument('--close_log', default=True, type=bool)
+parser.add_argument('--close_log', default=False, type=bool)
 
-parser.add_argument('--policy_server_num', default=3, type=int,
+parser.add_argument('--policy_server_num', default=1, type=int,
                     help='The number of server threads you want to launch')
 
-parser.add_argument('--model_names', default='model:0_player-id:4|model:0_player-id:5', type=str,
+parser.add_argument('--agent_type', default='train', type=str)
+
+parser.add_argument('--model_names', default='model_0_player-id_4|model_0_player-id_5', type=str,
                     help='The model names')
-#for test
+
 if __name__ == "__main__":
     args = parser.parse_args()
 

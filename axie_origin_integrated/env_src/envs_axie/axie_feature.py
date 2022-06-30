@@ -29,7 +29,7 @@ class Axie_Feature(object):
         self.battle_max_banish_pile = 18
         self.battle_max_discard_pile = 18
 
-        with open(os.path.join(config['path'], 'card2id.yaml'), "r") as f:
+        with open(os.path.join(os.path.dirname(__file__),'config', 'card2id.yaml'), "r") as f:
             self.card2id = yaml.load(f.read(), Loader=yaml.SafeLoader)
 
         self.duplicate_card = ['Anemone', 'Nimo', 'Puppy', 'Foxy', 'Nut Cracker', 'Puff', 'Nut Cracker', 'Little Owl', 'Peace Maker', 'Little Owl', 'Leaf Bug', 'Kotaro', 'Tiny Dino']
