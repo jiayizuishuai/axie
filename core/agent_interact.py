@@ -246,30 +246,32 @@ class DMCV3AgentInteract(BaseAgentInteract):
     def get_hidden_init(self):
         pass
 
-    def get_action(self, position, sim, flags=None):
+    def get_action(self, position, obs, flags=None):
         # obs = {
         #   'state': the state of two players and battle infos
         #   'raw_legal_actions' : the list of actions (card_name, card_target)
         #   'legal_actions' : the list of encoded actions (card_name, card_target)
         # }
-
-        # self.obs_x_no_action_buf[position].append(th.Tensor(obs['state']))
+        self.obs_x_no_action_buf[position].append(th.Tensor(obs['state']))
 
         response = self._send(
             {
                 "command": GET_ACTION,
                 "position": position,
-                "sim": sim,
+                "obs": obs,
                 "flags": flags
             }
         )
 
-        response = response['response']
+        # _action_idx = int(agent_output['action'].cpu().detach().numpy())
+        _action_idx = response['action']
+        action = obs['legal_actions'][_action_idx]
+        encoded_action = obs['encoded_legal_actions'][_action_idx]
 
-        self.obs_action_buf[position].append(th.Tensor(response['encoded_action']))
+        self.obs_action_buf[position].append(th.Tensor(encoded_action))
         self.size[position] += 1
 
-        return response['action']
+        return action
 
     def log_reward_info(self, reward, infos):
         pass
