@@ -153,7 +153,7 @@ if __name__ == '__main__':
 
     parser.add_argument("--ip", type=str, default="127.0.0.1", help="The ip to use.")
 
-    parser.add_argument("--port", type=int, default=6789, help="The port to use (on localhost).")
+    parser.add_argument("--port", type=int, default=6889, help="The port to use (on localhost).")
 
     parser.add_argument("--unroll_length", type=int, default=32, help="the length of data for once sending to server")
 

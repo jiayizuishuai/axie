@@ -9,7 +9,7 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument('--ip', type=str, default='127.0.0.1', help='The ip to use.')
 
-parser.add_argument("--port", type=int, default=6789,
+parser.add_argument("--port", type=int, default=6889,
                     help="The port to use (on localhost).")
 
 parser.add_argument('--learning_rate', default=0.0001, type=float,
