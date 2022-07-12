@@ -1,8 +1,0 @@
-env_args:
-  env_name: "CartPole-v0"
-  stop_reward: 9999
-  ip: "127.0.0.1"
-  port: 6789
-  agent_interact_type: "ppo"
-
-

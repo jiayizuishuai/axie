@@ -1,5 +1,0 @@
-env_args:
-  ip: "127.0.0.1"
-  port: 6789
-  stop_reward: 9999
-  exp_epsilon: 0.01
