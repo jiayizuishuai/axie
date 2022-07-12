@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package rl_grpc;
+
+service ModelService {
+    rpc Call(CallRequest) returns (CallResponse) {}
+}
+
+// input
+message CallRequest {
+    string input = 1; // Our numpy image in bytes (serialized by pickle)
+}
+
+// output
+message CallResponse {
+    string output_specs = 1; // Our negative resized image in bytes (serialized by pickle)
+}
