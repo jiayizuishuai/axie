@@ -120,9 +120,9 @@ if __name__ == '__main__':
 
     parser.add_argument("--unroll_length", type=int, default=32, help="the length of data for once sending to server")
 
-    parser.add_argument("--num_actors", type=int, default=100, help='The num of actors for once client launching')
+    parser.add_argument("--num_actors", type=int, default=50, help='The num of actors for once client launching')
 
-    parser.add_argument("--policy_server_num", type=int, default=1, help='The num of policy servers on server side')
+    parser.add_argument("--policy_server_num", type=int, default=10, help='The num of policy servers on server side')
 
     args = parser.parse_args()
 
