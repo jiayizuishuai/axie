@@ -2,8 +2,8 @@
 from .models import Model
 import torch
 
-from .env_src.envs_axie.axie_feature import Axie_Feature
-from .env_src.envs_axie.card_feature import Card_Feature
+from env_src.envs_axie.axie_feature import Axie_Feature
+from env_src.envs_axie.card_feature import Card_Feature
 from simulator.base import *
 from collections import OrderedDict
 
