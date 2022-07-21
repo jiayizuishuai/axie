@@ -126,6 +126,7 @@ class DMCV3Agent(BaseAgent):#learner
                     self.buffer_list[model_name].append(data)
     def get_save_model(self):
         self.save_model_queue.get()
+        print('保存模型队列为空，应该是TRUE才正确因为刚刚get---------'+str(self.save_model_queue.empty()))
 
     def update_infer_model(self, ready_list):
         for index, model_name in enumerate(self.model_names):
