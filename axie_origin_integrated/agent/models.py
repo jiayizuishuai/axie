@@ -15,7 +15,7 @@ class AxieModel(nn.Module):
         self.dense6 = nn.Linear(512, 1)
 
     def forward(self, x, return_value=False, flags=None):
-
+        x = x.float()
         x = self.dense1(x)
         x = torch.relu(x)
         x = self.dense2(x)
@@ -63,7 +63,7 @@ class Model:
         x = np.concatenate((states, actions), 1)
         x = torch.from_numpy(x).to(self.device)
 
-        model = self.models[position]
+        model = self.models[position]#加载self.models[模型号]，这是前馈
         return model.forward(x, training, flags)
 
     def share_memory(self):

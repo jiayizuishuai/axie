@@ -1,9 +1,11 @@
 import argparse
 import threading
 from multiprocessing import Process, Queue
-
-from agent.dmc_agent import DMCV3Agent
+#加载了两个对象，一个learner，一个接口模型
+from agent.dmc_agent import DMCV3Agent   #这个是learner，包含更新，训练
 from agent.dmc_infer_agent import DMCV3InferAgent
+
+
 from core.policy_server import PolicyServer
 from core.base_agent import axiev3_train
 import os
@@ -41,7 +43,7 @@ parser.add_argument('--buffer_size', default=1050, type=int,
                     help='buffer_size')
 
 parser.add_argument('--save_interval', default=600, type=int,
-                    help='The time interval(second) for saving the model parameters')
+                    help='The time interval(second) for saving the model parameters')#10分钟保存一次
 
 parser.add_argument('--log_interval', default=10, type=int,
                     help='The time interval(second) for log the train agent stats')
@@ -52,13 +54,13 @@ parser.add_argument('--model_save_dir', default='./models/', type=str,
 parser.add_argument('--model_load_dir', default='./models/', type=str,
                     help='The model load path')
 
-parser.add_argument('--load_model', action='store_true',
+parser.add_argument('--load_model_server', default='True',
                     help='Load an existing model')
 
-#parser.add_argument('--load_model', default=False,
-               #     help='Load an existing model')
+parser.add_argument('--load_model_env', default='True',
+                    help='Load an existing model')
 
-parser.add_argument('--train_device', default='cpu', type=str) # cpu or 0, 1, 2, ...
+parser.add_argument('--train_device', default='0', type=str) # cpu or 0, 1, 2, ...
 
 parser.add_argument('--infer_device', default='cpu', type=str) # cpu or 0, 1, 2, ...
 
@@ -72,17 +74,17 @@ parser.add_argument('--agent_type', default='train', type=str,
                          'service: this agent has no training service')
 
 
-# parser.add_argument('--model_names', default='model:0_player-id:4|model:0_player-id:5|model:0_player-id:6|model:0_player-id:7|model:0_player-id:8', type=str,
-#                     help='The model names')
 
 
-def create_infer(args, data_queue_dict, model_queue_dict, port):
-    agent = DMCV3InferAgent(args=args,
+def create_infer(args, data_queue_dict, model_queue_dict, save_model_queue,port):
+    #在这里只注册了一个主模型
+    agent_infer = DMCV3InferAgent(args=args,
                             data_queue_dict=data_queue_dict,
-                            model_queue_dict=model_queue_dict)
-    policy_server = PolicyServer(agent=agent,
-                                 address=args.ip,
-                                 port=port,
+                            model_queue_dict=model_queue_dict,
+                            save_model_queue=save_model_queue)
+    policy_server = PolicyServer(agent=agent_infer,#服务端加载了一个这样的对象
+                                 address=args.ip,#对应的ip
+                                 port=port,#对应的端口
                                  handler_type='dmcv3',
                                  close_log=args.close_log)
     policy_server.serve_forever()
@@ -103,26 +105,41 @@ if __name__ == "__main__":
     infer_agent_list = []
     data_queue_dict_list = [{model_name: Queue() for model_name in model_names} for _ in range(num_parallel)]
     model_queue_dict_list = [{model_name: Queue() for model_name in model_names} for _ in range(num_parallel)]
+    save_model_queue = Queue()
+
 
     for i, (data_queue_dict, model_queue_dict) in enumerate(zip(data_queue_dict_list, model_queue_dict_list)):
         process = Process(target=create_infer, kwargs={'args': args,
                                                        'data_queue_dict': data_queue_dict,
                                                        'model_queue_dict': model_queue_dict,
+                                                       'save_model_queue':save_model_queue,
                                                        'port': args.port + i})
         process.start()
         time.sleep(0.5)
 
+    agent = DMCV3Agent(args, data_queue_dict_list, model_queue_dict_list,save_model_queue)
 
-    agent = DMCV3Agent(args, data_queue_dict_list, model_queue_dict_list)
+    '''
+    #创建一个sever用来与客户端通信来得到是否保存模型
+    policy_server_save_model = PolicyServer(agent=agent,
+                                 address=args.ip,
+                                 port=7788,
+                                 handler_type='dmcv3',
+                                 close_log=args.close_log)
+    policy_server_save_model.serve_forever()
+    '''
+    #在服务端只注册主模型
 
     # 更新参数，infer解除阻塞
-    # agent.update_infer_model()
+    #agent.update_infer_model()
 
+    axiev3_train(agent,args)
+    '''
     train_thread = threading.Thread(target=axiev3_train,
                                     name='learn',
                                     kwargs={'agent': agent,
                                             'args': args})
     train_thread.start()
-
+    '''
 
 

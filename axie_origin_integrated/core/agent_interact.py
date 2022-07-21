@@ -2,7 +2,7 @@ import torch as th
 import cloudpickle as pickle
 import grpc
 from rl_grpc.rl_grpc_string import service_pb2_grpc, service_pb2
-from config.default_config import GET_ACTION, GET_INIT_HIDDEN_STATE, STORE
+from config.default_config import GET_ACTION, GET_INIT_HIDDEN_STATE, STORE , SAVE_MODEL
 
 import json
 import pandas as pd
@@ -15,9 +15,9 @@ class BaseAgentInteract:
 
 
     def _send(self, data):
+        input = json.dumps(data)
         payload = service_pb2.CallRequest(
-            input=json.dumps(data),
-        )
+            input=input,)
         response = self.session.Call(payload)
         parsed = json.loads(response.output_specs)
         return parsed
@@ -126,105 +126,7 @@ def _cards2tensor(list_cards):
     return matrix
 
 
-class DMCAgentInteract(BaseAgentInteract):
-    def __init__(self, address, positions, unroll_length):
-        super().__init__(address)
-        self.positions = positions
-        self.done_buf = {p: [] for p in positions}
-        self.episode_return_buf = {p: [] for p in positions}
-        self.target_buf = {p: [] for p in positions}
-        self.obs_x_no_action_buf = {p: [] for p in positions}
-        self.obs_action_buf = {p: [] for p in positions}
-        self.obs_z_buf = {p: [] for p in positions}
-        self.size = {p: 0 for p in positions}
 
-        self.T = unroll_length
-
-    def start_episode(self):
-        return True
-
-    def get_hidden_init(self):
-        pass
-
-    def get_action(self, position, obs, env_output, flags):
-        self.obs_x_no_action_buf[position].append(
-            env_output['obs_x_no_action'])
-        self.obs_z_buf[position].append(env_output['obs_z'])
-
-        response = self._send(
-            {
-                "command": GET_ACTION,
-                "position": position,
-                "z_batch": obs["z_batch"],
-                "x_batch": obs["x_batch"],
-                "flags": flags
-            }
-        )
-        # _action_idx = int(agent_output['action'].cpu().detach().numpy())
-        _action_idx = response["action"]
-        action = obs['legal_actions'][_action_idx]
-
-        self.obs_action_buf[position].append(_cards2tensor(action))
-        self.size[position] += 1
-
-        return action
-
-    def log_reward_info(self, reward, infos):
-        pass
-
-    def end_episode(self, env_output):
-        for p in self.positions:
-            diff = self.size[p] - len(self.target_buf[p])
-            if diff > 0:
-                self.done_buf[p].extend([False for _ in range(diff-1)])
-                self.done_buf[p].append(True)
-
-                episode_return = env_output['episode_return'] if p == 'landlord' else - \
-                    env_output['episode_return']
-                self.episode_return_buf[p].extend([0.0 for _ in range(diff-1)])
-                self.episode_return_buf[p].append(episode_return)
-                self.target_buf[p].extend(
-                    [episode_return for _ in range(diff)])
-
-        self.store()
-
-    def store(self):
-        for p in self.positions:
-            while self.size[p] > self.T:
-                local_buffer = {
-                    'done': self.done_buf[p][:self.T],
-                    'episode_return': self.episode_return_buf[p][:self.T],
-                    'target': self.target_buf[p][:self.T],
-                    'obs_x_no_action': th.stack(self.obs_x_no_action_buf[p][:self.T], dim=0),
-                    'obs_action': th.stack(self.obs_action_buf[p][:self.T], dim=0),
-                    'obs_z': th.stack(self.obs_z_buf[p][:self.T], dim=0)
-                }
-
-                response = self._send(
-                    {
-                        "command": STORE,
-                        "role": p,
-                        "episode_data": local_buffer
-                    }
-                )
-
-                self.done_buf[p] = self.done_buf[p][self.T:]
-                self.episode_return_buf[p] = self.episode_return_buf[p][self.T:]
-                self.target_buf[p] = self.target_buf[p][self.T:]
-                self.obs_x_no_action_buf[p] = self.obs_x_no_action_buf[p][self.T:]
-                self.obs_action_buf[p] = self.obs_action_buf[p][self.T:]
-                self.obs_z_buf[p] = self.obs_z_buf[p][self.T:]
-                self.size[p] -= self.T
-
-    def _send(self, data):
-        payload = pickle.dumps(data)
-        response = self.session.post(self.address, data=payload)
-        if response.status_code != 200:
-            # log
-            print(f"Request failed {response.text}: {data}")
-        response.raise_for_status()
-        parsed = pickle.loads(response.content)
-        return parsed
 
 
 class DMCV3AgentInteract(BaseAgentInteract):
@@ -246,12 +148,31 @@ class DMCV3AgentInteract(BaseAgentInteract):
     def get_hidden_init(self):
         pass
 
+
+    def get_action_evaluate(self, position, data, flags=None):#在evaluate阶段用的获取动作的函数
+        response = self._send(
+            {
+                "command": GET_ACTION,
+                "position": position,
+                "data": data['encoded_data'],
+                "flags": flags
+            }
+        )
+
+        response = response['response']
+
+        if (flags['data_type'] == 'simulator'):
+            return response['action']
+        elif (flags['data_type'] == 'code'):
+            return data['legal_actions'][response['action_idx']]
+
+
+
+
+
+
     def get_action(self, position, data, flags=None):
-        # obs = {
-        #   'state': the state of two players and battle infos
-        #   'raw_legal_actions' : the list of actions (card_name, card_target)
-        #   'legal_actions' : the list of encoded actions (card_name, card_target)
-        # }
+
 
         response = self._send(
             {
@@ -292,7 +213,7 @@ class DMCV3AgentInteract(BaseAgentInteract):
 
         self.store()
 
-    def store(self):
+    def store(self):#调用policy_sever中的函数
         for p in self.positions:
             while self.size[p] > self.T:
 
@@ -319,3 +240,9 @@ class DMCV3AgentInteract(BaseAgentInteract):
                 self.obs_action_buf[p] = self.obs_action_buf[p][self.T:]
                 self.size[p] -= self.T
 
+    def save_model(self):
+        self._send(
+            {
+                "command":SAVE_MODEL
+            }
+        )

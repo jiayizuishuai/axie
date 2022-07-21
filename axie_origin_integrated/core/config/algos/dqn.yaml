@@ -1,0 +1,8 @@
+algo_args:
+  learning_rate: 0.0005
+  gamma: 0.98
+  buffer_limit: 50000
+  batch_size: 32
+  train_num_i: 10
+  epsilon: 0.08
+  port: 6789

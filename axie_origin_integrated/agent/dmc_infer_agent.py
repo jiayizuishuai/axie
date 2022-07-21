@@ -34,13 +34,20 @@ class BaseAgent:
 from .models import Model
 
 
-class DMCV3InferAgent(BaseAgent):
-    def __init__(self, args, data_queue_dict, model_queue_dict):
+class DMCV3InferAgent(BaseAgent):#
+
+
+    #服务端注册的模型
+    #store
+    #update_infer_model
+    #get_action
+    def __init__(self, args, data_queue_dict, model_queue_dict,save_model_queue):
         self.args = args
         self.model_names = args.model_names
 
         self.data_queue_dict = data_queue_dict
         self.model_queue_dict = model_queue_dict
+        self.save_model_queue = save_model_queue
 
         self.config = {'config_path': os.path.join(os.path.abspath(os.path.dirname(__file__)), '../env_src/envs_axie/config')}
         self.axie_feature = Axie_Feature(self.config)
@@ -53,15 +60,16 @@ class DMCV3InferAgent(BaseAgent):
         self.device = torch.device(device)
 
         self.infer_models = Model(device=args.infer_device, model_names=self.model_names)
-
         for model_name in self.model_names:
-            # 这里将会阻塞住，直到更新参数过来
+            #这里将会阻塞住，直到更新参数过来
             parameter = self.model_queue_dict[model_name].get()
             self.update_infer_model(model_name, parameter)
 
-    def store(self, data, model_name):
+    def store(self, data, model_name):#这是policy_sever调用的函数
         # TODO：是否需要攒一波？
-        self.data_queue_dict[model_name].put(data)
+        self.data_queue_dict[model_name].put(data)#将数据保存到队列中
+    def save_model(self):
+        self.save_model_queue.put(True)
 
     def update_infer_model(self, model_name, parameter):
         self.infer_models.get_model(model_name).load_state_dict(parameter)
@@ -77,8 +85,7 @@ class DMCV3InferAgent(BaseAgent):
                                    'encoded_legal_actions': encoded_legal_actions})
 
         elif (flags['data_type'] == 'code'):
-            x_batch = OrderedDict({'state': np.array(data['state'], dtype=np.float32),
-                                   'encoded_legal_actions': np.array(data['encoded_legal_actions'], dtype=np.float32)})
+            x_batch = data
 
 
         agent_output = self.infer_models.forward(position, x_batch, flags=flags)
@@ -91,10 +98,10 @@ class DMCV3InferAgent(BaseAgent):
 
         elif (flags['data_type'] == 'code'):
             response = {'action_idx': _action_idx,
-                        'encoded_action': x_batch['encoded_legal_actions'][_action_idx].tolist()}
+                        'encoded_action': x_batch['encoded_legal_actions'][_action_idx]}
 
         # TODO：是否有更优雅的方式检查模型是否更新？
-        for model_name in self.model_names:
+        for model_name in self.model_names:#这里只需要判断  主模型是否更新就可以了
              while not self.model_queue_dict[model_name].empty():
                 parameter = self.model_queue_dict[model_name].get()
                 self.update_infer_model(model_name, parameter)
@@ -104,39 +111,3 @@ class DMCV3InferAgent(BaseAgent):
     def get_init_hidden_state(self):
         return None
 
-    def get_legal_actions(self, battle):
-        player = battle.current_player
-        enemy_player = player.enemy
-
-        cards = player.hand_cards
-
-        legal_actions = [['end_turn', -1]]
-        encoded_legal_actions = []
-
-        # find the legal action card and add into list
-        for card in cards:
-
-            if (card.can_play == False):
-                continue
-
-            target_type = card.target_type
-
-            if target_type == TargetType.Auto:
-                legal_actions.append([card, -1])
-
-            elif target_type == TargetType.Ally:
-                for position, axie in enumerate(player.positions):
-                    if axie:
-                        legal_actions.append([card, position])
-
-            elif target_type == TargetType.Enemy:
-                for position, axie in enumerate(player.enemy.positions):
-                    if axie:
-                        legal_actions.append([card, position])
-
-        # encode the legal action card
-        for action in legal_actions:
-            encoded_legal_actions.append(self.card_feature._card2array(battle, action))
-
-
-        return legal_actions, encoded_legal_actions

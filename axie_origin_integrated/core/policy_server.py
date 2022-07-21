@@ -1,7 +1,7 @@
 import grpc
 from concurrent import futures
 from rl_grpc.rl_grpc_string import service_pb2_grpc, service_pb2
-from config.default_config import GET_ACTION, GET_INIT_HIDDEN_STATE, STORE
+from config.default_config import GET_ACTION, GET_INIT_HIDDEN_STATE, STORE,SAVE_MODEL
 import json
 
 class PolicyServer:
@@ -53,6 +53,9 @@ class Handler(BaseHandler):
             response = {'hidden_state': None}
         elif command == STORE:
             self.agent.store(args['episode_data'])
+        elif command == SAVE_MODEL:
+            self.agent.save_model()
+
         else:
             raise Exception("Unknown command: {}".format(command))
         return response
@@ -106,6 +109,10 @@ class DMCV3Handler(BaseHandler):
             response = {'hidden_state': None}
         elif (command == STORE):
             self.agent.store(args['episode_data'], args['role'])
+        elif (command == SAVE_MODEL):
+            #将保存模型这一消息保存到队列中
+            self.agent.save_model()
+            pass
         else:
             raise Exception("Unknown command: {}".format(command))
 

@@ -36,13 +36,13 @@ class Env_Axie(object):
     def reset(self):
         self.sim.new_battle()
 
-        positions = self.generate_random_positions()
+        #positions = self.generate_random_positions()
 
-        self.players[0] = build_player_by_id(self.extract_player_id(positions[0]))
-        self.players[1] = build_player_by_id(self.extract_player_id(positions[1]))
+        self.players[0] = build_player_by_id(52)
+        self.players[1] = build_player_by_id(52)
 
-        self.player_ids[0] = positions[0]
-        self.player_ids[1] = positions[1]
+        self.player_ids[0] = 'model_main_player-id_52'
+        self.player_ids[1] = 'model_0_player-id_52'
 
         self.sim.add_player(self.players[0])
         self.sim.add_player(self.players[1])
@@ -84,7 +84,7 @@ class Env_Axie(object):
         legal_actions, encoded_legal_actions = self.get_legal_actions()
 
         #  下面是动作编码的获得
-        start = time.time()
+        #start = time.time()
         play_card_encodes = []
         for legal_action in legal_actions:
             action_card, action_target = legal_action
@@ -98,7 +98,7 @@ class Env_Axie(object):
                 play_card_encodes.append(play_card_encode)
 
         encoded_legal_actions = play_card_encodes
-        print(time.time() - start)
+        #print(time.time() - start)
 
 
 

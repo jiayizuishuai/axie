@@ -39,6 +39,7 @@ def create_optimizers(args, learner_model, positions):
     """
     Create three optimizers for the three positions
     """
+    #先只创建一个main 52 的learning
     positions = positions
     optimizers = {}
     for position in positions:
@@ -55,14 +56,15 @@ def compute_loss(logits, targets):
     loss = ((logits.squeeze(-1) - targets)**2).mean()
     return loss
 
-class DMCV3Agent(BaseAgent):
-    def __init__(self, args, data_queue_dict_list, model_queue_dict_list):
+class DMCV3Agent(BaseAgent):#learner
+    def __init__(self, args, data_queue_dict_list, model_queue_dict_list,save_model_queue,env = False):
         self.args = args
         self.batch_size = args.batch_size
         self.model_names = args.model_names
 
         self.data_queue_dict_list = data_queue_dict_list
         self.model_queue_dict_list = model_queue_dict_list
+        self.save_model_queue = save_model_queue
 
         self.config = {'config_path': os.path.join(os.path.abspath(os.path.dirname(__file__)), '../env_src/envs_axie/config')}
         self.axie_feature = Axie_Feature(self.config)
@@ -83,14 +85,20 @@ class DMCV3Agent(BaseAgent):
             device = 'cuda:' + str(args.train_device)
         self.device = torch.device(device)
 
-        self.learner_models = Model(device=args.train_device, model_names=self.model_names)
-        self.optimizers = create_optimizers(args, self.learner_models, self.model_names)
 
-        if (args.load_model):
-            self.model_load_dirs = {}
-            for model_name in self.model_names:
-                self.model_load_dirs[model_name] = self.args.model_load_dir + model_name + '/'
-            self.load_models()
+        #在服务端只加载一个主模型
+        main_model_list = []
+        main_model_list.append('model_main_player-id_52')
+        self.learner_models = Model(device=args.train_device, model_names=main_model_list)
+        self.optimizers = create_optimizers(args, self.learner_models, self.model_names)
+        if args.load_model_server:
+            sever_model_path = self.args.model_load_dir + 'model_main_player-id_52' + '/'
+            #加载服务端主模型
+            checkpoint_states = torch.load(sever_model_path + "model.tar",map_location=('cpu'))
+            self.learner_models.models['model_main_player-id_52'].load_state_dict(checkpoint_states['model_state_dict'])
+            self.optimizers['model_main_player-id_52'].load_state_dict(checkpoint_states['optimizer_state_dict'])
+            self.model_update_stats['model_main_player-id_52'] = checkpoint_states['stats']
+
 
         self.update_infer_model(ready_list=[True for _ in self.model_names])
 
@@ -116,7 +124,8 @@ class DMCV3Agent(BaseAgent):
                  while not q_dict[model_name].empty():
                     data = q_dict[model_name].get()
                     self.buffer_list[model_name].append(data)
-
+    def get_save_model(self):
+        self.save_model_queue.get()
 
     def update_infer_model(self, ready_list):
         for index, model_name in enumerate(self.model_names):
@@ -137,17 +146,51 @@ class DMCV3Agent(BaseAgent):
         return ready_list
 
     def model_save(self):
-        for model_name in self.learner_models.model_names:
-            checkpoint_path = self.model_save_dirs[model_name] + 'model.tar'
-            torch.save({'model_state_dict': self.learner_models.models[model_name].state_dict(),
-                        'optimizer_state_dict': self.optimizers[model_name].state_dict(),
-                        'stats': self.model_update_stats[model_name]
-                        }, checkpoint_path)
+        #现在开始写save model 的逻辑
+        model_history_path = './models/model_history.txt'
+        sever_model_path = './models/model_main_player-id_52' + '/'
+        env_model_path = './models/model_'+str(0)+'_player-id_52' + '/'
+        #保存主模型
+        checkpoint_path = './models/model_main_player-id_52/model.tar'
+        torch.save({'model_state_dict': self.learner_models.models['model_main_player-id_52'].state_dict(),
+                    'optimizer_state_dict': self.optimizers['model_main_player-id_52'].state_dict(),
+                    'stats': self.model_update_stats['model_main_player-id_52']
+                    }, checkpoint_path)
 
-            model_weight_path = self.model_save_dirs[model_name] + 'model.pth'
-            torch.save(self.learner_models.models[model_name], model_weight_path)
+        model_weight_path = './models/model_main_player-id_52/model.pth'
+        torch.save(self.learner_models.models['model_main_player-id_52'], model_weight_path)
+        #保存主模型的历史
+        ##获取文件中的模型ID号
 
-        print("Model save finished!")
+        model_history_path = './models/model_history.txt'
+        file = open(model_history_path, 'r')
+        model_history = file.read()
+        file.close()
+        model_history = int(model_history) + 1
+        #创建一个文件夹
+
+
+        #b保存模型
+        #创建新的文件夹
+        dir_path = './models/model_'+str(model_history)+'_player-id_52'
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+
+
+        checkpoint_path = './models/model_'+str(model_history)+'_player-id_52/model.tar'
+        torch.save({'model_state_dict': self.learner_models.models['model_main_player-id_52'].state_dict(),
+                    'optimizer_state_dict': self.optimizers['model_main_player-id_52'].state_dict(),
+                    'stats': self.model_update_stats['model_main_player-id_52']
+                    }, checkpoint_path)
+
+        model_weight_path = './models/model_'+str(model_history)+'_player-id_52/model.pth'
+        torch.save(self.learner_models.models['model_main_player-id_52'], model_weight_path)
+        #写入最新模型id号
+        file = open(model_history_path, 'w+')
+        file.write(str(model_history))
+        file.close()
+        print('模型保存成功')
+        return "Model save finished!"
 
 
     def train(self, ready_list):
@@ -199,8 +242,8 @@ class DMCV3Agent(BaseAgent):
 
             print("______________")
 
-    def load_models(self):
-        for model_name in self.model_names:
+    def load_models(self):#嘉义的分支没用到这个函数呢还
+        for model_name in self.model_names:#学习学习怎么加载模型
             checkpoint_states = torch.load(self.model_load_dirs[model_name] + "model.tar",
                                            map_location=('cpu')
                                            )

@@ -48,10 +48,12 @@ def axiev3_train(agent, args=None, lock=threading.Lock()):
         agent.store()
 
         ready_list = agent.check_update()
-        agent.train(ready_list=ready_list)
+        agent.train(ready_list=ready_list)#内存中永远是最新的
         with lock:
             agent.update_infer_model(ready_list=ready_list)
-
-        if args and (time.time() - last_checkpoint_time > args.save_interval):
-            last_checkpoint_time = time.time()
+        #现在是经过一段时间自己保存模型
+        #if args and (time.time() - last_checkpoint_time > args.save_interval):
+        #    last_checkpoint_time = time.time()
+        if not agent.save_model_queue.empty():
+            agent.get_save_model()
             agent.model_save()
