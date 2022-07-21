@@ -3,7 +3,7 @@ import cloudpickle as pickle
 import grpc
 from rl_grpc.rl_grpc_string import service_pb2_grpc, service_pb2
 from config.default_config import GET_ACTION, GET_INIT_HIDDEN_STATE, STORE , SAVE_MODEL
-
+import numpy
 import json
 import pandas as pd
 import os
@@ -192,7 +192,14 @@ class DMCV3AgentInteract(BaseAgentInteract):
         if (flags['data_type'] == 'simulator'):
             return response['action']
         elif (flags['data_type'] == 'code'):
-            return data['legal_actions'][response['action_idx']]
+            #添加探索
+
+            if numpy.random.rand(1) <0.95:
+
+                return data['legal_actions'][response['action_idx']]
+            else:
+                random = numpy.random.randint(low=0, high=len(data['legal_actions']))
+                return data['legal_actions'][random]
 
     def log_reward_info(self, reward, infos):
         pass

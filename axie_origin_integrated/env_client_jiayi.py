@@ -244,9 +244,10 @@ if __name__ == '__main__':
                     target=env_construct_and_run,
                     args=(i, config, port_id, forward_agent))
                 actor.start()
-                actor.join()
+            actor.join()
 
 
         if test_win < 0.6 :
+            print('小于0.6继续学习，不保存模型胜率为'+str(test_win))
             pass
 
