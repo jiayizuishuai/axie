@@ -194,7 +194,7 @@ class DMCV3AgentInteract(BaseAgentInteract):
         elif (flags['data_type'] == 'code'):
             #添加探索
 
-            if numpy.random.rand(1) <0.95:
+            if numpy.random.rand(1) < 0.95:
 
                 return data['legal_actions'][response['action_idx']]
             else:
