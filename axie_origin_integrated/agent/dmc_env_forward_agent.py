@@ -6,6 +6,7 @@ import os
 import torch
 import numpy as np
 from torch import nn
+import numpy
 class AxieModel(nn.Module):
     def __init__(self):
         super().__init__()
@@ -69,17 +70,25 @@ class DMCV3Agent_forward():
     def __init__(self,model_name):
         self.model_name = model_name
         self.forward_model = Model(device='cpu')  # 初始化模型
-
-        #客户端加载了模型，但是不检查更新永远前馈，也不会存储数据
-        env_model =os.path.abspath(os.path.dirname(os.path.dirname(__file__)))+'/models/' + model_name + '/'
-        checkpoint_states = torch.load(env_model + "model.tar", map_location=('cpu'))
-        self.forward_model.model.load_state_dict(checkpoint_states['model_state_dict'])
+        if model_name == 'model_-1_player-id_52':
+            print('加载了一个随机模型')
+        else:
+            #客户端加载了模型，但是不检查更新永远前馈，也不会存储数据
+            env_model =os.path.abspath(os.path.dirname(os.path.dirname(__file__)))+'/models/' + model_name + '/'
+            checkpoint_states = torch.load(env_model + "model.tar", map_location=('cpu'))
+            self.forward_model.model.load_state_dict(checkpoint_states['model_state_dict'])
 
     def get_action(self,data,flags):
         x_batch = data['encoded_data']
         agent_output = self.forward_model.forward( x_batch, flags=flags)
         _action_idx = int(agent_output['action'].cpu().detach().numpy())
-        return data['legal_actions'][_action_idx]
+        #添加规则  ， 对手出牌的时候,如果出end_turn，则让其出其他牌
+        if _action_idx == 0:
+            #print('随机出牌')
+            random = numpy.random.randint(low=0, high=len(data['legal_actions']))
+            return data['legal_actions'][random]
+        else:
+            return data['legal_actions'][_action_idx]
 
 
 

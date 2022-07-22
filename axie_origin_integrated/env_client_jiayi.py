@@ -24,7 +24,7 @@ loads_every_thing()
 
 
 
-def evaluate( main_model,evaluate_model_name):
+def evaluate(main_model,evaluate_model_name):
     '''
 
     :param env:   将环境输入进来
@@ -36,6 +36,8 @@ def evaluate( main_model,evaluate_model_name):
     forward_agent = evaluate_model_name
     env = Env_Axie(config)
     win = 0
+    game_not_zero = 0
+    game_zero = 0
     for i in range(100):
         env.reset()
         while not env.sim.is_finished():
@@ -50,8 +52,8 @@ def evaluate( main_model,evaluate_model_name):
 
                 if current_player_index == 0 :
                     action = agent_interface.get_action_evaluate(position=env.player_ids[current_player_index],
-                                                        data=env.get_state(list_type=True),
-                                                        flags={'data_type': 'code'})
+                                                       data=env.get_state(list_type=True),
+                                                     flags={'data_type': 'code'})
 
                 if current_player_index == 1 :
                     action = forward_agent.get_action(data = env.get_state(list_type=True),flags={'data_type':'code'})
@@ -61,6 +63,7 @@ def evaluate( main_model,evaluate_model_name):
 
 
                 action_card, action_target = action
+                #print(action_card)
 
                 # break the loop if the action is "end turn"
                 if (action_card == 'end_turn'): break
@@ -76,10 +79,20 @@ def evaluate( main_model,evaluate_model_name):
             env.sim.end_round()
 
 
-        info = {'episode_return': env.get_reward(0)}
-        if info['episode_return']  == 1:
-            win += 1
-    win = win/128
+        win_0 = env.get_reward(0)
+        win_1 = env.get_reward(1)
+        if win_0 ==0 and win_1 == 0:
+            #print('平局')
+            game_not_zero = game_not_zero
+        else:
+            #print('没平局')
+            game_not_zero += 1
+            if win_0 == 1:
+                win += 1
+    if game_not_zero == 0:
+        print('全部都平局了')
+    else:
+        win = win/game_not_zero
     print('胜率为：'+str(win))
     return win
 
@@ -168,9 +181,9 @@ if __name__ == '__main__':
 
     parser.add_argument("--unroll_length", type=int, default=32, help="the length of data for once sending to server")
 
-    parser.add_argument("--num_actors", type=int, default=5, help='The num of actors for once client launching')
+    parser.add_argument("--num_actors", type=int, default=6, help='The num of actors for once client launching')
 
-    parser.add_argument("--policy_server_num", type=int, default=1, help='The num of policy servers on server side')
+    parser.add_argument("--policy_server_num", type=int, default=2, help='The num of policy servers on server side')
 
 
     args = parser.parse_args()
@@ -204,6 +217,7 @@ if __name__ == '__main__':
                                          config_path=config['config_path'],
                                          unroll_length=args.unroll_length)
     '''
+
     while True:
         #从0开始学
         model_history_path = './models/model_history.txt'
