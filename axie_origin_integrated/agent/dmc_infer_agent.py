@@ -92,6 +92,7 @@ class DMCV3InferAgent(BaseAgent):#
         _action_idx = int(agent_output['action'].cpu().detach().numpy())
 
 
+
         if (flags['data_type'] == 'simulator'):
             response = {'action': x_batch['legal_actions'][_action_idx],
                         'encoded_action': x_batch['encoded_legal_actions'][_action_idx]}

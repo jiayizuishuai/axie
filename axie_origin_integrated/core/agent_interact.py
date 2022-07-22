@@ -184,6 +184,10 @@ class DMCV3AgentInteract(BaseAgentInteract):
         )
 
         response = response['response']
+        #if response['action_idx'] == 0:
+         #   random_action = numpy.random.randint(low=0 , high= len(data['legal_actions']))
+          #  response['action_idx'] = random_action
+
 
         self.obs_x_no_action_buf[position].append(data['encoded_data']['state'])
         self.obs_action_buf[position].append(response['encoded_action'])
@@ -192,14 +196,9 @@ class DMCV3AgentInteract(BaseAgentInteract):
         if (flags['data_type'] == 'simulator'):
             return response['action']
         elif (flags['data_type'] == 'code'):
-            #添加探索
 
-            if numpy.random.rand(1) < 0.95:
+            return data['legal_actions'][response['action_idx']]
 
-                return data['legal_actions'][response['action_idx']]
-            else:
-                random = numpy.random.randint(low=0, high=len(data['legal_actions']))
-                return data['legal_actions'][random]
 
     def log_reward_info(self, reward, infos):
         pass

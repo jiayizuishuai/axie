@@ -66,7 +66,7 @@ parser.add_argument('--infer_device', default='cpu', type=str) # cpu or 0, 1, 2,
 
 parser.add_argument('--close_log', default=False, type=bool)
 
-parser.add_argument('--policy_server_num', default=2, type=int,
+parser.add_argument('--policy_server_num', default=1, type=int,
                     help='The number of server threads you want to launch')
 
 parser.add_argument('--agent_type', default='train', type=str,

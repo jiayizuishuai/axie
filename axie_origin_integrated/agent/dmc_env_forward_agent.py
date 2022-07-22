@@ -34,7 +34,8 @@ class AxieModel(nn.Module):
         if return_value:
             return dict(values=x)
         else:
-            if flags is not None and 'exp_epsilon' in flags.keys() and flags.exp_epsilon > 0 and np.random.rand() < flags.exp_epsilon:
+            if flags is not None and 'exp_epsilon' in flags.keys() and flags['exp_epsilon']> 0 and np.random.rand() < flags['exp_epsilon']:
+
                 action = torch.randint(x.shape[0], (1,))[0]
             else:
                 action = torch.argmax(x,dim=0)[0]
@@ -82,13 +83,7 @@ class DMCV3Agent_forward():
         x_batch = data['encoded_data']
         agent_output = self.forward_model.forward( x_batch, flags=flags)
         _action_idx = int(agent_output['action'].cpu().detach().numpy())
-        #添加规则  ， 对手出牌的时候,如果出end_turn，则让其出其他牌
-        if _action_idx == 0:
-            #print('随机出牌')
-            random = numpy.random.randint(low=0, high=len(data['legal_actions']))
-            return data['legal_actions'][random]
-        else:
-            return data['legal_actions'][_action_idx]
+        return data['legal_actions'][_action_idx]
 
 
 

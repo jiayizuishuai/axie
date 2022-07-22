@@ -38,7 +38,7 @@ def evaluate(main_model,evaluate_model_name):
     win = 0
     game_not_zero = 0
     game_zero = 0
-    for i in range(100):
+    for i in range(50):
         env.reset()
         while not env.sim.is_finished():
             env.sim.begin_round()
@@ -139,7 +139,7 @@ def env_construct_and_run(i, config, port_id,forward_agent):
                                                         flags={'data_type':'code'})
 
                 if current_player_index == 1:
-                    action = forward_agent.get_action(data = env.get_state(list_type=True),flags={'data_type':'code'})
+                    action = forward_agent.get_action(data = env.get_state(list_type=True),flags={'data_type':'code','exp_epsilon':0.05})
 
 
 
@@ -181,9 +181,9 @@ if __name__ == '__main__':
 
     parser.add_argument("--unroll_length", type=int, default=32, help="the length of data for once sending to server")
 
-    parser.add_argument("--num_actors", type=int, default=6, help='The num of actors for once client launching')
+    parser.add_argument("--num_actors", type=int, default=4, help='The num of actors for once client launching')
 
-    parser.add_argument("--policy_server_num", type=int, default=2, help='The num of policy servers on server side')
+    parser.add_argument("--policy_server_num", type=int, default=1, help='The num of policy servers on server side')
 
 
     args = parser.parse_args()

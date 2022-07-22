@@ -149,7 +149,7 @@ class Env_Axie(object):
 
         cards = player.hand_cards
 
-        legal_actions = [['end_turn', -1]]
+        legal_actions = []
         encoded_legal_actions = []
 
         # find the legal action card and add into list
@@ -179,7 +179,7 @@ class Env_Axie(object):
                 for position, axie in enumerate(player.positions):
                     if not axie:
                         legal_actions.append([card, position])
-
+        legal_actions.append(['end_turn', -1])
         # encode the legal action card
         for action in legal_actions:
             encoded_legal_actions.append(self.card_feature._card2array(self.sim.battle, action))
