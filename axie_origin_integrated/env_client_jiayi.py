@@ -136,10 +136,10 @@ def env_construct_and_run(i, config, port_id,forward_agent):
 
                     action = agent_interface.get_action(position=env.player_ids[current_player_index],
                                                         data=env.get_state(list_type=True),
-                                                        flags={'data_type':'code'})
+                                                        flags={'data_type':'code','exp_epsilon':0.05})
 
                 if current_player_index == 1:
-                    action = forward_agent.get_action(data = env.get_state(list_type=True),flags={'data_type':'code','exp_epsilon':0.05})
+                    action = forward_agent.get_action(data = env.get_state(list_type=True),flags={'data_type':'code'})
 
 
 
@@ -181,7 +181,7 @@ if __name__ == '__main__':
 
     parser.add_argument("--unroll_length", type=int, default=32, help="the length of data for once sending to server")
 
-    parser.add_argument("--num_actors", type=int, default=4, help='The num of actors for once client launching')
+    parser.add_argument("--num_actors", type=int, default=5, help='The num of actors for once client launching')
 
     parser.add_argument("--policy_server_num", type=int, default=1, help='The num of policy servers on server side')
 

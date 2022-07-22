@@ -31,7 +31,7 @@ class AxieModel(nn.Module):
         if return_value:
             return dict(values=x)
         else:
-            if flags is not None and 'exp_epsilon' in flags.keys() and flags.exp_epsilon > 0 and np.random.rand() < flags.exp_epsilon:#小于才探索 设置为0.05
+            if flags is not None and 'exp_epsilon' in flags.keys() and flags['exp_epsilon']> 0 and np.random.rand() < flags['exp_epsilon']:#小于才探索 设置为0.05
                 action = torch.randint(x.shape[0], (1,))[0]
             else:
                 action = torch.argmax(x,dim=0)[0]
